@@ -1,0 +1,1217 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CTEV Foot Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: a lab bench. One 3D specimen sits on top and is driven by two modes (Explore, Treat).
+   Reference tables and drills run underneath. Each CAVE deformity keeps its own colour from slider to table. */
+:root {
+  --bg: #0d151b;
+  --surface: #131e26;
+  --surface-2: #1a2732;
+  --line: #263643;
+  --fg: #e8eff3;
+  --muted: #94a8b4;
+  --bone: #ece3cf;
+  --bone-ink: #1b1a14;
+  --cav: #f2b650;
+  --add: #f0807a;
+  --var: #a994f5;
+  --equ: #52c9e2;
+  --good: #4cc38a;
+  --bad: #ef6b6b;
+  --hind: #d9a86c;
+  --mid: #8fc7a0;
+  --fore: #ece3cf;
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 16px/1.55 var(--font-body);
+  padding-inline: 16px;
+}
+.page { max-width: 1040px; margin-inline: auto; padding-block: 22px 72px; }
+a { color: inherit; }
+button { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
+
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h1 { font: 400 clamp(2.7rem, 11vw, 5rem)/.98 var(--font-display); margin: 14px 0 12px; text-wrap: balance; letter-spacing: -.01em; }
+h1 em { color: var(--bone); }
+.lede { max-width: 58ch; color: var(--muted); font-size: 1.05rem; margin: 0; }
+.jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.jump a { font: 500 12px/1 var(--font-mono); text-decoration: none; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
+
+/* viewer */
+.viewer { margin-top: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+.vtop { display: flex; gap: 8px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; background: var(--bg); padding: 3px; border-radius: 10px; }
+.tab { font: 600 13px/1 var(--font-body); padding: 9px 16px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--bone); color: var(--bone-ink); }
+.cap { font: 400 12px/1.3 var(--font-mono); color: var(--muted); }
+.stage { position: relative; aspect-ratio: 4 / 3; max-height: 78vh; background: #0f1920; overflow: hidden; }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#gl:active { cursor: grabbing; }
+.fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); margin: 0; }
+.tag { position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; font: 500 11px/1 var(--font-mono); padding: 4px 6px; border-radius: 6px; background: rgba(13, 21, 27, .86); border: 1px solid var(--line); color: var(--fg); will-change: transform; }
+.tag.arc { color: #0d151b; border: 0; font-weight: 600; }
+.tag.axis { background: none; border: 0; color: var(--muted); letter-spacing: .16em; font-size: 10px; }
+.viewbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.chip { font: 500 12px/1 var(--font-mono); padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"], .chip.on { background: var(--bone); color: var(--bone-ink); border-color: var(--bone); }
+.viewbar.sub { border-top: 0; padding-top: 0; }
+.zoomrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 2px 12px 12px; }
+.zoomrow label { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.zoomrow input { width: 100%; min-width: 0; accent-color: var(--bone); margin: 0; }
+.zoomrow output { font: 500 13px var(--font-mono); font-variant-numeric: tabular-nums; min-width: 3.6ch; text-align: right; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0 12px 12px; font-size: .85rem; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.readout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.rd { padding: 10px 12px 12px; border-right: 1px solid var(--line); min-width: 0; }
+.rd:last-child { border-right: 0; }
+.rd b { font: 500 11px/1 var(--font-mono); display: flex; gap: 6px; align-items: center; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.rd i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.rd .val { font: 400 1.55rem/1.15 var(--font-display); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.rd .bar { height: 3px; background: var(--surface-2); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.rd .bar span { display: block; height: 100%; background: var(--c); width: 0; }
+
+.panel { padding: 12px 12px 16px; border-top: 1px solid var(--line); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding-block: 9px; align-items: center; }
+.row label { display: flex; gap: 8px; align-items: center; font-weight: 600; min-width: 0; }
+.row .sub { font-weight: 400; color: var(--muted); font-size: .85rem; }
+.row output { font: 500 13px var(--font-mono); font-variant-numeric: tabular-nums; }
+.row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--c); margin: 4px 0 0; }
+.letter { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--c); color: #0d151b; font: 600 12px var(--font-mono); flex: none; }
+.hint { color: var(--muted); font-size: .9rem; margin: 10px 0 0; max-width: 62ch; }
+
+.steps { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+.steps .chip { flex: none; }
+.scard { margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--surface-2); }
+.scard h3 { font: 400 1.6rem/1.15 var(--font-display); margin: 4px 0 0; text-wrap: balance; }
+.wk { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.scard dl { display: grid; gap: 12px; margin: 14px 0 0; }
+.scard dt { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.scard dd { margin: 4px 0 0; max-width: 64ch; }
+.hookline { background: var(--bone); color: var(--bone-ink); padding: 9px 11px; border-radius: 8px; }
+.ctrl { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* sections */
+section.block { margin-top: 56px; }
+h2 { font: 400 clamp(1.9rem, 6vw, 2.6rem)/1.08 var(--font-display); margin: 0 0 14px; text-wrap: balance; }
+h3.sm { font: 600 1rem/1.3 var(--font-body); margin: 22px 0 6px; }
+p { max-width: 68ch; margin: 0 0 12px; }
+ul.tight { margin: 0 0 12px; padding-left: 20px; max-width: 68ch; }
+ul.tight li { margin-bottom: 6px; }
+.muted { color: var(--muted); }
+.hy { font: 600 10px/1 var(--font-mono); letter-spacing: .08em; background: var(--bone); color: var(--bone-ink); padding: 3px 5px; border-radius: 4px; vertical-align: middle; margin-left: 6px; white-space: nowrap; }
+.idea { margin-top: 56px; background: var(--bone); color: var(--bone-ink); border-radius: 16px; padding: clamp(22px, 5vw, 44px); }
+.idea p { font: 400 clamp(1.55rem, 4.8vw, 2.6rem)/1.14 var(--font-display); max-width: 30ch; margin: 0; text-wrap: balance; }
+.idea .eyebrow { color: #5e5a4a; margin-bottom: 14px; }
+
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 660px; }
+th { font: 500 11px/1.2 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
+td { padding: 12px; vertical-align: top; border-bottom: 1px solid var(--line); font-size: .95rem; }
+tr:last-child td { border-bottom: 0; }
+td.k { white-space: nowrap; font-weight: 600; }
+td .letter { margin-right: 8px; vertical-align: middle; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 0 0 16px; }
+.fact { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); }
+.fact b { display: block; font: 400 1.5rem/1.1 var(--font-display); }
+.fact span { color: var(--muted); font-size: .88rem; }
+
+.brace { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 12px; max-width: 460px; }
+.brace svg { width: 100%; height: auto; display: block; }
+.sv-bone { fill: var(--bone); }
+.sv-dim { fill: var(--muted); }
+.sv-line { stroke: var(--line); }
+.sv-bar { stroke: var(--bone); }
+.sv-txt { fill: var(--fg); font: 500 11px var(--font-mono); }
+
+/* pirani */
+.pir { display: grid; gap: 8px; }
+.pgrp { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 10px 0 0; }
+.pi { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.pi .name { font-weight: 600; }
+.pi .ph { grid-column: 1 / -1; color: var(--muted); font-size: .85rem; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: 500 13px/1 var(--font-mono); padding: 9px 12px; border: 0; background: var(--surface-2); color: var(--fg); cursor: pointer; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--bone); color: var(--bone-ink); }
+.ptotal { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+.ptotal .big { font: 400 3rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.ptotal .sub { color: var(--muted); font: 400 13px var(--font-mono); }
+.pmeter { height: 6px; border-radius: 3px; background: var(--surface-2); margin-top: 10px; overflow: hidden; max-width: 460px; }
+.pmeter span { display: block; height: 100%; width: 0; background: var(--bone); transition: width .25s ease; }
+
+/* quiz */
+.q { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--surface); margin-block: 12px; }
+.qtext { font-weight: 600; margin: 0 0 4px; }
+.tp { background: var(--bone); color: var(--bone-ink); border-radius: 8px; padding: 9px 11px; margin: 10px 0 0; font-size: .95rem; }
+.opt { display: block; width: 100%; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font: inherit; margin-top: 8px; cursor: pointer; }
+.opt .why { display: block; color: var(--muted); font-size: .9rem; margin-top: 6px; }
+.opt.right { border-color: var(--good); background: rgba(76, 195, 138, .13); }
+.opt.wrong { border-color: var(--bad); background: rgba(239, 107, 107, .13); }
+.opt:disabled { cursor: default; color: var(--fg); }
+.score { font: 500 13px var(--font-mono); color: var(--muted); margin-top: 10px; }
+
+.recall { border: 1px solid var(--line); border-radius: 14px; padding: 18px; background: var(--surface); }
+.recall ol { margin: 8px 0 0; padding-left: 20px; max-width: 64ch; }
+.recall li { margin-bottom: 8px; }
+.foot { margin-top: 40px; color: var(--muted); font-size: .85rem; max-width: 66ch; }
+
+@media (max-width: 639px) {
+  .stage { aspect-ratio: 1 / 1; }
+  .readout .rd { padding-inline: 8px; }
+  .rd .val { font-size: 1.3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmeter span { transition: none; }
+}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">NEET PG · Orthopaedics · Paediatric ortho</p>
+    <h1>CTEV, <em>taken apart</em></h1>
+    <p class="lede">Congenital talipes equinovarus is four deformities sharing one pivot. Rotate the foot, move each angle yourself, then watch Ponseti undo them in order.</p>
+    <nav class="jump" aria-label="Sections">
+      <a href="#wrong">What's wrong</a>
+      <a href="#rules">Ponseti rules</a>
+      <a href="#brace">Brace</a>
+      <a href="#fails">If it fails</a>
+      <a href="#pirani">Pirani</a>
+      <a href="#drill">MCQs</a>
+    </nav>
+  </header>
+
+  <section class="viewer" aria-label="Interactive 3D foot">
+    <div class="vtop">
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tab-explore" role="tab" aria-selected="true" type="button">Explore</button>
+        <button class="tab" id="tab-treat" role="tab" aria-selected="false" type="button">Treat</button>
+      </div>
+      <span class="cap">Right foot · drag: rotate · two fingers: move and zoom</span>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="gl" tabindex="0" aria-label="3D model of a right foot and ankle. Use arrow keys to rotate, Shift with arrow keys to move, and plus and minus to zoom."></canvas>
+      <p class="fallback" id="glfallback" hidden>The 3D view needs WebGL, which this browser did not start. The sliders and the step cards below still work.</p>
+    </div>
+    <div class="viewbar" role="group" aria-label="Camera views">
+      <button class="chip" type="button" data-view="front">Front</button>
+      <button class="chip" type="button" data-view="medial">Medial</button>
+      <button class="chip" type="button" data-view="lateral">Lateral</button>
+      <button class="chip" type="button" data-view="back">Back</button>
+      <button class="chip" type="button" data-view="top">Top</button>
+      <button class="chip" type="button" data-view="sole">Sole</button>
+    </div>
+    <div class="viewbar sub" role="group" aria-label="Zoom and move">
+      <button class="chip" type="button" id="b-fit">Fit foot</button>
+      <button class="chip" type="button" id="b-whole">Whole leg</button>
+      <button class="chip" type="button" id="b-zin">Zoom +</button>
+      <button class="chip" type="button" id="b-zout">Zoom &minus;</button>
+      <button class="chip" type="button" id="b-up">Move up</button>
+      <button class="chip" type="button" id="b-down">Move down</button>
+    </div>
+    <div class="zoomrow">
+      <label for="s-zoom">Zoom</label>
+      <input type="range" id="s-zoom" min="0.6" max="4" step="0.05" value="1.25">
+      <output id="o-zoom" for="s-zoom">1.3&times;</output>
+    </div>
+    <div class="viewbar sub" role="group" aria-label="Display options">
+      <button class="chip" type="button" id="b-spin" aria-pressed="true">Spin</button>
+      <button class="chip" type="button" id="b-angles" aria-pressed="true">Angles</button>
+      <button class="chip" type="button" id="b-labels" aria-pressed="false">Labels</button>
+      <button class="chip" type="button" id="b-regions" aria-pressed="true">Bone colours</button>
+      <button class="chip" type="button" id="b-arch" aria-pressed="true">Arch line</button>
+    </div>
+    <div class="legend" id="legend">
+      <span style="--c: var(--hind)"><i></i>Hindfoot: talus, calcaneus</span>
+      <span style="--c: var(--mid)"><i></i>Midfoot: navicular, cuboid, 3 cuneiforms</span>
+      <span style="--c: var(--fore)"><i></i>Forefoot: 5 metatarsals, phalanges</span>
+      <span style="--c: var(--good)"><i></i>Green line: medial longitudinal arch</span>
+    </div>
+    <div class="readout" aria-live="off">
+      <div class="rd" style="--c: var(--cav)"><b><i></i>Cavus</b><div class="val" id="rv-C">0°</div><div class="bar"><span id="rb-C"></span></div></div>
+      <div class="rd" style="--c: var(--add)"><b><i></i>Adductus</b><div class="val" id="rv-A">0°</div><div class="bar"><span id="rb-A"></span></div></div>
+      <div class="rd" style="--c: var(--var)"><b><i></i>Varus</b><div class="val" id="rv-V">0°</div><div class="bar"><span id="rb-V"></span></div></div>
+      <div class="rd" style="--c: var(--equ)"><b><i></i>Equinus</b><div class="val" id="rv-E">0°</div><div class="bar"><span id="rb-E"></span></div></div>
+    </div>
+
+    <div class="panel" id="panel-explore">
+      <div class="presets">
+        <button class="chip" type="button" data-preset="normal">Normal foot</button>
+        <button class="chip" type="button" data-preset="ctev">Untreated CTEV</button>
+        <button class="chip" type="button" data-preset="severe">Severe, neglected</button>
+        <button class="chip" type="button" data-preset="ma">Metatarsus adductus only</button>
+      </div>
+      <div class="row" style="--c: var(--cav)">
+        <label for="s-C"><span class="letter">C</span><span>Cavus <span class="sub">forefoot dips down</span></span></label>
+        <output id="o-C">0°</output>
+        <input type="range" id="s-C" min="0" max="50" step="1" value="35">
+      </div>
+      <div class="row" style="--c: var(--add)">
+        <label for="s-A"><span class="letter">A</span><span>Adductus <span class="sub">foot swings in around the talus</span></span></label>
+        <output id="o-A">0°</output>
+        <input type="range" id="s-A" min="-20" max="50" step="1" value="35">
+      </div>
+      <div class="row" style="--c: var(--var)">
+        <label for="s-V"><span class="letter">V</span><span>Varus <span class="sub">heel tilts inward</span></span></label>
+        <output id="o-V">0°</output>
+        <input type="range" id="s-V" min="0" max="45" step="1" value="30">
+      </div>
+      <div class="row" style="--c: var(--equ)">
+        <label for="s-E"><span class="letter">E</span><span>Equinus <span class="sub">ankle points down</span></span></label>
+        <output id="o-E">0°</output>
+        <input type="range" id="s-E" min="-25" max="60" step="1" value="40">
+      </div>
+      <p class="hint">Watch the talus while you drag Adductus. The talus stays put and the heel, the navicular and the forefoot all rotate around its head. That single picture explains the whole treatment.<br>For the arch, press Medial, keep Arch line on, then drag Cavus. The forefoot drops and the green line steepens.</p>
+    </div>
+
+    <div class="panel" id="panel-treat" hidden>
+      <div class="steps" id="steps" role="group" aria-label="Ponseti steps"></div>
+      <div class="scard" aria-live="polite">
+        <span class="wk" id="sc-wk"></span>
+        <h3 id="sc-title"></h3>
+        <dl>
+          <div><dt>What you do</dt><dd id="sc-do"></dd></div>
+          <div><dt>Why it works</dt><dd id="sc-why"></dd></div>
+          <div><dt>Exam hook <span class="hy">HY</span></dt><dd class="hookline" id="sc-hook"></dd></div>
+        </dl>
+      </div>
+      <div class="ctrl">
+        <button class="chip" type="button" id="b-prev">Back</button>
+        <button class="chip" type="button" id="b-play">Play</button>
+        <button class="chip" type="button" id="b-next">Next</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="idea">
+    <p class="eyebrow">The one idea</p>
+    <p>Everything in CTEV hangs off the talus. The navicular, calcaneus and forefoot are all swung inward around its head, so treatment swings them back out around the same head.</p>
+  </div>
+
+  <section class="block" id="wrong">
+    <h2>What's wrong with the foot</h2>
+    <div class="facts">
+      <div class="fact"><b>~1 in 1000</b><span>live births, varies by population</span></div>
+      <div class="fact"><b>Boys 2 : 1</b><span>male to female</span></div>
+      <div class="fact"><b>30 to 50%</b><span>bilateral</span></div>
+      <div class="fact"><b>Mostly idiopathic</b><span>syndromic: arthrogryposis, myelomeningocele</span></div>
+    </div>
+    <p>The deformity is remembered as CAVE. Each letter is a separate problem with its own tight structures, and the order in which you fix them matters. <span class="hy">HY</span></p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Deformity</th><th>What you see</th><th>What is tight or displaced</th><th>Ponseti answer</th></tr></thead>
+        <tbody>
+          <tr><td class="k"><span class="letter" style="--c: var(--cav)">C</span>Cavus</td><td>Forefoot plantar-flexed on the hindfoot, high arch, first ray down</td><td>Plantar fascia, intrinsic muscles, abductor hallucis</td><td><b>Cast 1.</b> Supinate the forefoot and lift the first metatarsal</td></tr>
+          <tr><td class="k"><span class="letter" style="--c: var(--add)">A</span>Adductus</td><td>Forefoot and midfoot turned in at the midtarsal joints</td><td>Navicular displaced medially (close to the medial malleolus), tight tibialis posterior, spring ligament, deltoid</td><td><b>Casts 2 to 5.</b> Abduct the foot around the talar head</td></tr>
+          <tr><td class="k"><span class="letter" style="--c: var(--var)">V</span>Varus</td><td>Heel inverted, calcaneus rotated medially under the talus</td><td>Subtalar and calcaneofibular ligaments, posteromedial capsule</td><td><b>Same move as A.</b> The heel corrects by itself as the calcaneus swings out</td></tr>
+          <tr><td class="k"><span class="letter" style="--c: var(--equ)">E</span>Equinus</td><td>Ankle and subtalar joint plantar-flexed, heel empty</td><td>Achilles tendon, posterior ankle and subtalar capsule</td><td><b>Last.</b> Percutaneous Achilles tenotomy in most feet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 class="sm">Bone and soft tissue findings</h3>
+    <ul class="tight">
+      <li><b>Talus</b> has a short neck deviated medially and plantar-wards, so its head points in and down. It is the primary abnormality.</li>
+      <li><b>Navicular</b> is displaced medially and articulates close to the medial malleolus. <b>Cuboid</b> is displaced medially on the calcaneus.</li>
+      <li><b>Calcaneus</b> is in equinus and varus and rotated under the talus.</li>
+      <li><b>Soft tissue:</b> posteromedial contracture, a small calf (hypoplastic muscles) and a shorter foot on the affected side.</li>
+      <li><b>X-ray</b> (rarely needed to start treatment): talus and calcaneus run parallel, so the talocalcaneal angle drops toward zero. The usual normal range is roughly 25 to 50 degrees, and sources differ on exact cutoffs. <span class="hy">HY</span></li>
+    </ul>
+    <h3 class="sm">Severity scores</h3>
+    <ul class="tight">
+      <li><b>Pirani:</b> 6 clinical signs, each 0, 0.5 or 1, maximum 6. Calculator further down.</li>
+      <li><b>Dimeglio:</b> four main parameters plus four small ones, maximum 20. Grades: benign below 5, moderate 5 to 10, severe 10 to 15, very severe 15 to 20.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="rules">
+    <h2>Ponseti, as a set of rules</h2>
+    <p>Start in the first one to two weeks of life while the ligaments are still pliable. Gentle manipulation for one to two minutes, then a long-leg cast with the knee bent to about 90 degrees, changed weekly. Most feet need about five casts. <span class="hy">HY</span></p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Rule</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Fix cavus first</td><td>Supinate the forefoot so it lines up with the hindfoot. Until you do, abducting the foot just twists it.</td></tr>
+          <tr><td class="k">Fulcrum is the talar head</td><td>Thumb on the lateral side of the talar head, abduct the foot under it. The calcaneus then swings out and under the talus on its own.</td></tr>
+          <tr><td class="k">Never press on the calcaneus</td><td>It locks the heel against the talus and stops the abduction you are trying to gain.</td></tr>
+          <tr><td class="k">Never pronate the forefoot</td><td>Pronation deepens cavus. It was the error in the older Kite method, which also used the calcaneocuboid joint as the fulcrum.</td></tr>
+          <tr><td class="k">Equinus comes last</td><td>Dorsiflexing before the heel is abducted bends the midfoot instead, which makes a rocker-bottom foot.</td></tr>
+          <tr><td class="k">Tenotomy if dorsiflexion is under 15°</td><td>Percutaneous cut about 1 to 1.5 cm above the calcaneal insertion, followed by a final cast for 3 weeks with the foot abducted 60 to 70 degrees.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="brace">
+    <h2>The brace is the treatment's second half</h2>
+    <p>After the final cast the child wears a foot abduction orthosis, which is straight-last shoes fixed to a Denis Browne bar. Typical schedule is 23 hours a day for 3 months, then nights and naps until about 3 to 4 years. <span class="hy">HY</span></p>
+    <div class="brace">
+      <svg viewBox="0 0 360 170" role="img" aria-label="Top view of a foot abduction brace. The clubfoot side is rotated out 70 degrees and the normal side 45 degrees.">
+        <line class="sv-bar" x1="40" y1="120" x2="320" y2="120" stroke-width="5" stroke-linecap="round"/>
+        <line class="sv-line" x1="110" y1="120" x2="110" y2="30" stroke-dasharray="3 4"/>
+        <line class="sv-line" x1="250" y1="120" x2="250" y2="30" stroke-dasharray="3 4"/>
+        <g transform="translate(110 120) rotate(-70)"><rect class="sv-bone" x="-13" y="-72" width="26" height="74" rx="12"/></g>
+        <g transform="translate(250 120) rotate(45)"><rect class="sv-dim" x="-13" y="-72" width="26" height="74" rx="12"/></g>
+        <text class="sv-txt" x="110" y="150" text-anchor="middle">Clubfoot side · 70°</text>
+        <text class="sv-txt" x="250" y="150" text-anchor="middle">Normal side · 45°</text>
+      </svg>
+    </div>
+    <p class="muted" style="margin-top:10px">Source books give slightly different angles. The part to remember is that the affected foot is rotated out more than the normal one.</p>
+    <p>The commonest reason for relapse is that the child stops wearing the brace. A relapse shows up as returning equinus, varus or adductus, usually in the first few years, and is treated with repeat casting.</p>
+  </section>
+
+  <section class="block" id="fails">
+    <h2>When Ponseti is not enough</h2>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Situation</th><th>Option</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Idiopathic, first line</td><td>Ponseti casts, tenotomy, brace</td><td>Succeeds in the large majority of feet</td></tr>
+          <tr><td class="k">Relapse in a young child</td><td>Repeat casting, then tenotomy if needed</td><td>Restart the same sequence, then restore bracing</td></tr>
+          <tr><td class="k">Dynamic supination on walking, after about 2.5 to 3 years</td><td>Tibialis anterior transfer to the lateral cuneiform</td><td>Foot must be fully corrected first, by casting if needed <span class="hy">HY</span></td></tr>
+          <tr><td class="k">Rigid, resistant or neglected foot</td><td>Posteromedial soft-tissue release (Turco), Cincinnati incision</td><td>Releases the tight posteromedial structures in one operation</td></tr>
+          <tr><td class="k">Older child with residual forefoot adduction</td><td>Lateral column shortening (Evans, calcaneocuboid)</td><td>Used when the lateral column is relatively long</td></tr>
+          <tr><td class="k">Rigid deformity in an older child or adult</td><td>Triple arthrodesis</td><td>Talocalcaneal, talonavicular and calcaneocuboid joints fused. Salvage procedure <span class="hy">HY</span></td></tr>
+          <tr><td class="k">Neglected, severe</td><td>Ilizarov frame for gradual correction</td><td>Lower yield for exams</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="pirani">
+    <h2>Score a foot with Pirani</h2>
+    <p>Tap a value for each sign. Three signs describe the hindfoot and three describe the midfoot, and the total runs from 0 (normal) to 6 (worst). <span class="hy">HY</span></p>
+    <div class="pir" id="pirani-list"></div>
+    <div class="ptotal">
+      <span class="big" id="p-total">0</span>
+      <span class="sub" id="p-sub">of 6 · hindfoot 0 · midfoot 0</span>
+    </div>
+    <div class="pmeter" aria-hidden="true"><span id="p-meter"></span></div>
+    <p class="hint">Scores are tracked cast by cast. Each week the midfoot score should fall as the talar head becomes covered, and tenotomy is considered once the foot is abducted but dorsiflexion is still under 15 degrees.</p>
+  </section>
+
+  <section class="block" id="drill">
+    <h2>MCQ drill</h2>
+    <p>Tap an answer. You get the teaching point first, then a reason for every option.</p>
+    <div id="quiz"></div>
+    <div class="score" id="qscore"></div>
+    <div class="ctrl"><button class="chip" type="button" id="q-reset">Reset drill</button></div>
+  </section>
+
+  <section class="block" id="recall">
+    <h2>Now say it back</h2>
+    <div class="recall">
+      <p>Send me these in your own words in chat, and I'll mark them like an examiner.</p>
+      <ol>
+        <li>Why is cavus corrected first, and what goes wrong if the forefoot is pronated?</li>
+        <li>Why do you never press on the calcaneus, and what is the fulcrum instead?</li>
+        <li>Why does equinus come last, and what deformity appears if you hurry it?</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="foot">Study aid for exam revision. Exact numbers such as cast counts, brace angles and normal radiographic angles differ a little between textbooks, so check them against your standard text.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var D2R = Math.PI / 180;
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function $(id) { return document.getElementById(id); }
+  var reduced = false;
+  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+
+  var KEYS = ["C", "A", "V", "E"];
+  var MAXV = { C: 50, A: 50, V: 45, E: 60 };
+  var P = { C: 35, A: 35, V: 30, E: 40 };
+  var T = { C: 35, A: 35, V: 30, E: 40 };
+  var PRESETS = {
+    normal: { C: 0, A: 0, V: 0, E: 0 },
+    ctev: { C: 35, A: 35, V: 30, E: 40 },
+    severe: { C: 48, A: 46, V: 42, E: 56 },
+    ma: { C: 0, A: 28, V: 0, E: 0 }
+  };
+  var flags = { cast: false, pulse: null, cut: false };
+  var mode = "explore", stepIdx = 0, playTimer = null;
+  var guides = true, labelsOn = window.innerWidth >= 600, spin = !reduced, regionsOn = true, archOn = true;
+  var dirty = true;
+  var api = { setView: function () {}, zoomBy: function () {}, setMag: function () {}, panBy: function () {}, fit: function () {}, recenter: function () {}, regions: function () {} };
+  var hasGL = false, renderer = null;
+
+  var STEPS = [
+    { label: "Birth", wk: "Day 0", title: "Untreated CTEV", v: { C: 35, A: 35, V: 30, E: 40 }, cast: false, pulse: null, cut: false,
+      doIt: "Examine, score with Pirani and explain the plan. Casting should begin in the first one to two weeks of life, while the ligaments are still pliable.",
+      why: "The foot is a rigid tangle with the forefoot hooked in, the heel turned in and the ankle pointing down. It has to be unwound in a fixed order.",
+      hook: "CTEV is a clinical diagnosis. Pirani and Dimeglio grade severity, and no X-ray is needed to start." },
+    { label: "Cast 1", wk: "Week 1", title: "Cast 1: correct the cavus", v: { C: 0, A: 30, V: 27, E: 40 }, cast: true, pulse: "ray", cut: false,
+      doIt: "Supinate the forefoot and lift the first metatarsal head so the forefoot lines up with the hindfoot. Long-leg cast with the knee at about 90 degrees.",
+      why: "Cavus is a forefoot pronated on a supinated hindfoot. Until the forefoot is aligned, swinging the foot outward only twists it.",
+      hook: "First deformity corrected is cavus, by supination. Pronating the forefoot makes cavus worse." },
+    { label: "Cast 2", wk: "Week 2", title: "Cast 2: abduct around the talus", v: { C: 0, A: 20, V: 17, E: 40 }, cast: true, pulse: "head", cut: false,
+      doIt: "One thumb sits on the lateral side of the talar head as the fulcrum. The other hand abducts the supinated foot for one to two minutes, then the cast goes on.",
+      why: "The navicular, cuboid and calcaneus all hang off the talus. Pushing the forefoot outward swings the calcaneus out and under the talus, so varus corrects without touching the heel.",
+      hook: "Fulcrum is the head of the talus. Never press on the calcaneus." },
+    { label: "Cast 3", wk: "Week 3", title: "Cast 3: keep abducting", v: { C: 0, A: 8, V: 5, E: 38 }, cast: true, pulse: "head", cut: false,
+      doIt: "Repeat the same manoeuvre each week. Every cast gains a little more abduction and the heel varus falls away on its own.",
+      why: "Ligaments remodel under gentle sustained stretch, so progress is gradual. Rushing it risks damaging the foot.",
+      hook: "Casts are changed weekly and the average is about five." },
+    { label: "Cast 4", wk: "Week 4", title: "Cast 4: C, A and V are done", v: { C: 0, A: -4, V: 0, E: 34 }, cast: true, pulse: "head", cut: false,
+      doIt: "The foot is now abducted to about 60 to 70 degrees from the tibial axis. Heel varus has gone and the lateral talar head is no longer prominent.",
+      why: "Only equinus is left. Pushing dorsiflexion earlier bends the midfoot while the calcaneus is still in equinus.",
+      hook: "Dorsiflexing before the heel is abducted gives a rocker-bottom foot. Equinus is always last." },
+    { label: "Cast 5", wk: "Week 5", title: "Cast 5: test the ankle", v: { C: 0, A: -9, V: 0, E: 28 }, cast: true, pulse: "head", cut: false,
+      doIt: "With the foot fully abducted, check passive dorsiflexion. If it is under 15 degrees, plan an Achilles tenotomy.",
+      why: "Casting stretches the calf poorly once the foot is abducted, so a tight Achilles needs to be released surgically.",
+      hook: "Most feet need a tenotomy. The trigger is dorsiflexion under 15 degrees after abduction." },
+    { label: "Tenotomy", wk: "Week 6", title: "Percutaneous Achilles tenotomy", v: { C: 0, A: -10, V: 0, E: -15 }, cast: false, pulse: null, cut: true,
+      doIt: "Cut the Achilles about 1 to 1.5 cm above the calcaneal insertion, in clinic under local anaesthesia. Dorsiflexion jumps to at least 15 degrees.",
+      why: "The Achilles is the last tight structure. The tendon is simply allowed to heal at a longer length.",
+      hook: "Tenotomy comes after C, A and V are corrected, and is followed by a 3-week final cast." },
+    { label: "Final cast", wk: "Weeks 6 to 9", title: "Final cast for 3 weeks", v: { C: 0, A: -10, V: 0, E: -15 }, cast: true, pulse: null, cut: false,
+      doIt: "A long-leg cast with the foot abducted 60 to 70 degrees and dorsiflexed about 15 degrees, worn for 3 weeks.",
+      why: "The tendon heals in its new, longer position while the cast holds the correction.",
+      hook: "Final cast is 3 weeks after tenotomy." },
+    { label: "Brace", wk: "From week 9", title: "Foot abduction brace", v: { C: 0, A: -10, V: 0, E: -5 }, cast: false, pulse: null, cut: false,
+      doIt: "Denis Browne bar with straight-last shoes, 23 hours a day for 3 months, then at night and nap time until about 3 to 4 years of age.",
+      why: "The tendency to relapse persists through early growth, so the brace holds the abducted position until the foot stays corrected on its own.",
+      hook: "Commonest cause of relapse is non-compliance with the brace." }
+  ];
+
+  var QZ = [
+    { q: "Which component of CTEV does the Ponseti method correct first?",
+      o: [["Equinus", "Equinus is last. It is released by tenotomy only after the other three are corrected."],
+          ["Cavus", "Correct. The forefoot is supinated and the first ray lifted so it lines up with the hindfoot."],
+          ["Varus", "Varus corrects together with adductus when the foot is abducted around the talus, after cavus."],
+          ["Adductus", "Adductus is second, and it is corrected along with varus."]],
+      a: 1, tp: "CAVE order: Cavus, then Adductus with Varus together, then Equinus last." },
+    { q: "During Ponseti manipulation, what is the fulcrum for abduction?",
+      o: [["Head of the talus (lateral side)", "Correct. The foot is abducted under a stable talus, so the calcaneus swings out with it."],
+          ["Calcaneus", "Pressing on the heel blocks it from moving under the talus and stops the correction."],
+          ["Calcaneocuboid joint", "That was the Kite fulcrum. It locks the calcaneus and risks a rocker-bottom foot."],
+          ["Medial malleolus", "It is not a fulcrum for the manoeuvre."]],
+      a: 0, tp: "Thumb on the lateral talar head, abduct the supinated foot, never touch the calcaneus." },
+    { q: "A child treated by Ponseti at 6 months does well, then the foot starts turning in again at 10 months. Most likely cause?",
+      o: [["Inadequate Achilles tenotomy", "A short Achilles would show up as early residual equinus, not as a later relapse."],
+          ["Underlying neuromuscular disease", "That would usually be resistant from the start. This foot corrected, so the pattern fits poor bracing."],
+          ["Poor brace compliance", "Correct. Non-compliance with the abduction brace is the commonest cause of relapse."],
+          ["Casts changed too slowly", "That affects the initial correction, which here was achieved."]],
+      a: 2, tp: "Relapse after good correction means the brace was not worn until proven otherwise." },
+    { q: "A 3.5-year-old with a corrected clubfoot now walks with dynamic supination. Best next step?",
+      o: [["Triple arthrodesis", "That is a salvage procedure for rigid deformity in older children and adults."],
+          ["Posteromedial release", "It is for rigid, resistant feet, whereas this foot is flexible with a dynamic problem."],
+          ["Tibialis anterior transfer to the lateral cuneiform", "Correct, after the foot is fully corrected, by recasting if needed."],
+          ["Repeat Achilles tenotomy", "Equinus is not the problem here. The tibialis anterior is overpowering the everters."]],
+      a: 2, tp: "Dynamic supination after the age of about 2.5 to 3 years: transfer the tibialis anterior laterally." },
+    { q: "What is the usual brace set-up for a unilateral clubfoot?",
+      o: [["Affected foot 70 degrees external rotation, normal foot 45 degrees", "Correct. The affected foot is rotated out more. Exact numbers vary a little by source."],
+          ["Both feet rotated inward 20 degrees", "The brace holds the feet abducted (turned outward), not inward."],
+          ["Affected foot 45 degrees, normal foot 70 degrees", "Reversed. The clubfoot needs more abduction."],
+          ["Both feet in neutral", "Neutral would not hold the correction."]],
+      a: 0, tp: "Brace holds abduction. The clubfoot side is rotated out more than the normal side." },
+    { q: "A newborn has a forefoot turned in with a neutral flexible heel and no equinus. Diagnosis?",
+      o: [["CTEV", "CTEV has hindfoot varus and a rigid equinus, which are absent here."],
+          ["Congenital vertical talus", "That is a rigid rocker-bottom with the forefoot dorsiflexed, the opposite of this picture."],
+          ["Metatarsus adductus", "Correct. It is isolated forefoot adduction with a normal hindfoot, and the Metatarsus adductus preset above shows it."],
+          ["Calcaneovalgus", "That foot is dorsiflexed and everted, not adducted."]],
+      a: 2, tp: "Isolated adductus with a normal heel is metatarsus adductus, not CTEV." }
+  ];
+
+  var PIR = [
+    { g: "Hindfoot", n: "Posterior crease", h: "1 means a deep crease that changes the heel contour" },
+    { g: "Hindfoot", n: "Rigid equinus", h: "1 means fixed, the ankle will not dorsiflex" },
+    { g: "Hindfoot", n: "Empty heel", h: "1 means the heel feels empty, 0 means the heel is firm and palpable" },
+    { g: "Midfoot", n: "Medial crease", h: "1 means a deep crease that changes the arch contour" },
+    { g: "Midfoot", n: "Curved lateral border", h: "1 means clearly curved, 0 means straight" },
+    { g: "Midfoot", n: "Lateral talar head coverage", h: "1 means the head is uncovered and prominent, 0 means fully covered" }
+  ];
+
+  /* ---------- readouts and sliders ---------- */
+  function paintReadout() {
+    KEYS.forEach(function (k) {
+      var v = Math.round(P[k]);
+      var a = $("rv-" + k); if (a) a.textContent = v + "°";
+      var o = $("o-" + k); if (o) o.textContent = v + "°";
+      var b = $("rb-" + k); if (b) b.style.width = clamp(Math.abs(P[k]) / MAXV[k] * 100, 0, 100) + "%";
+    });
+  }
+  function syncSliders(src) {
+    KEYS.forEach(function (k) { var el = $("s-" + k); if (el) el.value = src[k]; });
+  }
+  function commit() {
+    if (!hasGL || reduced) { KEYS.forEach(function (k) { P[k] = T[k]; }); paintReadout(); }
+    dirty = true;
+  }
+  function setTarget(obj) {
+    KEYS.forEach(function (k) { T[k] = obj[k]; });
+    syncSliders(T);
+    commit();
+    api.recenter(T);
+  }
+  KEYS.forEach(function (k) {
+    var el = $("s-" + k);
+    el.addEventListener("input", function () {
+      var v = +el.value; P[k] = v; T[k] = v; paintReadout(); dirty = true;
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-preset]"), function (b) {
+    b.addEventListener("click", function () { setTarget(PRESETS[b.getAttribute("data-preset")]); });
+  });
+
+  /* ---------- 3D ---------- */
+  function init3D() {
+    var wrap = $("stage"), canvas = $("gl");
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x0f1920, 1);
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+    scene.add(new THREE.HemisphereLight(0xdfeaf2, 0x1b2730, 0.95));
+    var keyL = new THREE.DirectionalLight(0xffffff, 0.85); keyL.position.set(7, 11, 9); scene.add(keyL);
+    var rimL = new THREE.DirectionalLight(0x7fb8ff, 0.45); rimL.position.set(-9, 4, -7); scene.add(rimL);
+    var grid = new THREE.GridHelper(26, 13, 0x2a3c49, 0x1a2a34); grid.position.y = -3.05; scene.add(grid);
+
+    var boneMat = new THREE.MeshStandardMaterial({ color: 0xe9dfc8, roughness: 0.62, metalness: 0 });
+    var boneDim = new THREE.MeshStandardMaterial({ color: 0xc9bfa8, roughness: 0.7, metalness: 0 });
+    var hindMat = new THREE.MeshStandardMaterial({ color: 0xd9a86c, roughness: 0.6, metalness: 0 });
+    var midMat = new THREE.MeshStandardMaterial({ color: 0x8fc7a0, roughness: 0.6, metalness: 0 });
+    var foreMat = new THREE.MeshStandardMaterial({ color: 0xece3cf, roughness: 0.62, metalness: 0 });
+    function paintRegions() {
+      hindMat.color.setHex(regionsOn ? 0xd9a86c : 0xe9dfc8);
+      midMat.color.setHex(regionsOn ? 0x8fc7a0 : 0xe9dfc8);
+      foreMat.color.setHex(0xe9dfc8);
+      dirty = true;
+    }
+    api.regions = paintRegions;
+    paintRegions();
+    var tendonMat = new THREE.MeshStandardMaterial({ color: 0xd7a98e, roughness: 0.6, metalness: 0 });
+    var castMat = new THREE.MeshStandardMaterial({ color: 0xdfe9ef, roughness: 0.9, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
+    var sphG = new THREE.SphereGeometry(1, 28, 20);
+
+    function ell(mat, rx, ry, rz, x, y, z) {
+      var m = new THREE.Mesh(sphG, mat); m.scale.set(rx, ry, rz); m.position.set(x, y, z); return m;
+    }
+    function rod(mat, r, len, rTip) {
+      var g = new THREE.Group();
+      var c = new THREE.Mesh(new THREE.CylinderGeometry(rTip || r, r, len, 14), mat);
+      c.rotation.x = Math.PI / 2; c.position.z = len / 2; g.add(c);
+      var a = new THREE.Mesh(sphG, mat); a.scale.setScalar(r); g.add(a);
+      var b = new THREE.Mesh(sphG, mat); b.scale.setScalar(rTip || r); b.position.z = len; g.add(b);
+      return g;
+    }
+
+    /* leg: fixed */
+    var leg = new THREE.Group(); scene.add(leg);
+    var tib = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.05, 8.2, 28), boneDim); tib.position.set(0.1, 4.9, 0); leg.add(tib);
+    leg.add(ell(boneDim, 1.15, 0.5, 1.05, 0.1, 0.8, 0));
+    leg.add(ell(boneDim, 0.45, 0.75, 0.5, 1.0, 0.35, 0.05));
+    var fib = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.4, 8, 18), boneDim); fib.position.set(-1.65, 4.2, -0.15); leg.add(fib);
+    leg.add(ell(boneDim, 0.42, 0.8, 0.5, -1.65, -0.05, -0.15));
+    var castLeg = new THREE.Mesh(new THREE.CylinderGeometry(1.95, 2.1, 8.4, 36, 1, true), castMat);
+    castLeg.position.set(0, 4.8, 0); castLeg.visible = false; scene.add(castLeg);
+
+    /* equinus group pivots at the ankle */
+    var eq = new THREE.Group(); scene.add(eq);
+    var bodyPos = new THREE.Vector3(0, -0.15, -0.3);
+    var BASE = 0.32;
+    function headFor(th, ta, out) {
+      var L = 2.3;
+      out.set(Math.sin(th) * Math.cos(ta) * L, -Math.sin(ta) * L, Math.cos(th) * Math.cos(ta) * L).add(bodyPos);
+      return out;
+    }
+    var headBase = headFor(12 * D2R, 12 * D2R, new THREE.Vector3());
+    var headPos = headBase.clone();
+
+    eq.add(ell(hindMat, 1.3, 0.75, 1.35, bodyPos.x, bodyPos.y, bodyPos.z));
+    var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 1, 16), hindMat); eq.add(neck);
+    var head = ell(hindMat, 0.8, 0.7, 0.78, 0, 0, 0); eq.add(head);
+
+    /* block pivots at the talar head */
+    var B = new THREE.Group(); eq.add(B);
+    var Bin = new THREE.Group(); Bin.position.copy(headBase).negate(); B.add(Bin);
+    var calc = ell(hindMat, 0.9, 0.7, 2.2, -0.05, -1.62, -0.25); Bin.add(calc);
+    Bin.add(ell(hindMat, 0.8, 0.75, 0.7, 0, -1.85, -2.0));
+    var cub = ell(midMat, 0.62, 0.56, 1.0, -0.78, -1.45, 3.0); Bin.add(cub);
+    var nav = ell(midMat, 0.52, 0.68, 0.42, 0.55, -0.8, 3.05); Bin.add(nav);
+    var mcun = ell(midMat, 0.4, 0.52, 0.52, 0.95, -1.0, 3.85); Bin.add(mcun);
+    var icun = ell(midMat, 0.3, 0.4, 0.42, 0.42, -0.9, 3.95); Bin.add(icun);
+    var lcun = ell(midMat, 0.32, 0.44, 0.46, -0.1, -1.0, 3.85); Bin.add(lcun);
+    var castFoot = ell(castMat, 2.3, 2.0, 6.0, 0, -1.2, 3.0); castFoot.visible = false; Bin.add(castFoot);
+
+    var F = new THREE.Group(); F.position.set(0.15, -1.25, 4.1); Bin.add(F);
+    var rays = [
+      { x: 0.95, r: 0.31, sp: 0.09, len: 2.55 },
+      { x: 0.5, r: 0.22, sp: 0.03, len: 2.9 },
+      { x: 0.03, r: 0.21, sp: -0.02, len: 2.8 },
+      { x: -0.44, r: 0.2, sp: -0.07, len: 2.6 },
+      { x: -0.9, r: 0.2, sp: -0.12, len: 2.35 }
+    ];
+    var mt1 = null, rayG = [], toeG = [];
+    rays.forEach(function (d, i) {
+      var g = new THREE.Group(); g.position.x = d.x; g.rotation.y = d.sp; F.add(g);
+      var m = rod(foreMat, d.r, d.len, d.r * 0.8); g.add(m);
+      rayG.push(g);
+      if (i === 0) mt1 = m;
+      var toe = new THREE.Group(); toe.position.z = d.len + 0.14; toe.rotation.x = -BASE; g.add(toe);
+      toeG.push(toe);
+      var segs = i === 0 ? [[0.9, 0.28], [0.7, 0.24]] : [[0.6, 0.15], [0.45, 0.13]];
+      var z = 0;
+      segs.forEach(function (s) {
+        var p = rod(foreMat, s[1], s[0]); p.position.z = z; toe.add(p); z += s[0] + s[1] * 1.5;
+      });
+    });
+
+    /* markers */
+    var markHead = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthTest: false, wireframe: true }));
+    markHead.renderOrder = 6; markHead.visible = false; eq.add(markHead);
+    var markRay = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: 0xf2b650, transparent: true, opacity: 0.4, depthTest: false, wireframe: true }));
+    markRay.renderOrder = 6; markRay.position.set(0.95, 0, 1.3); markRay.visible = false; F.add(markRay);
+    var cutRing = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.07, 8, 28), new THREE.MeshBasicMaterial({ color: 0xff5a5a, transparent: true, opacity: 0.95, depthTest: false }));
+    cutRing.renderOrder = 6; cutRing.visible = false; scene.add(cutRing);
+
+    /* achilles tendon, rebuilt from the heel's world position */
+    var tendonUp = new THREE.Mesh(new THREE.BufferGeometry(), tendonMat); scene.add(tendonUp);
+    var tendonLow = new THREE.Mesh(new THREE.BufferGeometry(), tendonMat); scene.add(tendonLow);
+    var heelLocal = new THREE.Vector3(0, -1.9, -2.3);
+    var achMid = new THREE.Vector3();
+    function tubeSeg(mesh, curve, t0, t1) {
+      var pts = [];
+      for (var i = 0; i <= 14; i++) pts.push(curve.getPoint(t0 + (t1 - t0) * i / 14));
+      mesh.geometry.dispose();
+      mesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.26, 8, false);
+    }
+    var zAxis = new THREE.Vector3(0, 0, 1);
+    function updateTendon() {
+      var H = Bin.localToWorld(heelLocal.clone());
+      var curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 6.4, -1.55), new THREE.Vector3(0, 4.0, -1.9), new THREE.Vector3(0, 1.6, -2.15), H
+      ]);
+      if (flags.cut) {
+        tubeSeg(tendonUp, curve, 0, 0.58);
+        tubeSeg(tendonLow, curve, 0.74, 1);
+        tendonLow.visible = true;
+        cutRing.visible = true;
+        cutRing.position.copy(curve.getPoint(0.66));
+        var tg = curve.getTangent(0.66);
+        cutRing.quaternion.setFromUnitVectors(zAxis, tg);
+      } else {
+        tubeSeg(tendonUp, curve, 0, 1);
+        tendonLow.visible = false;
+        cutRing.visible = false;
+      }
+      achMid.copy(curve.getPoint(0.2));
+    }
+
+    /* medial longitudinal arch line: heel, sustentaculum, talar head, navicular, medial cuneiform, 1st metatarsal head */
+    var archMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x4cc38a, depthTest: false }));
+    archMesh.renderOrder = 7; archMesh.frustumCulled = false; scene.add(archMesh);
+    var ap = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+    function updateArch() {
+      archMesh.visible = archOn;
+      if (!archOn) return;
+      Bin.localToWorld(ap[0].set(0.2, -2.5, -2.0));
+      Bin.localToWorld(ap[1].set(0.45, -1.7, 0.9));
+      ap[2].copy(headPos); eq.localToWorld(ap[2]);
+      nav.getWorldPosition(ap[3]);
+      mcun.getWorldPosition(ap[4]);
+      mt1.localToWorld(ap[5].set(0, 0, rays[0].len));
+      archMesh.geometry.dispose();
+      archMesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ap), 48, 0.07, 6, false);
+    }
+
+    /* auto-framing: bounding sphere of the foot bones for a given pose */
+    var fp = [], fCenter = new THREE.Vector3(), fBox = new THREE.Box3(), follow = true, saveP = {};
+    for (var fi = 0; fi < 12; fi++) fp.push(new THREE.Vector3());
+    function footSphere(out, pose) {
+      var k;
+      if (pose) { for (k = 0; k < KEYS.length; k++) { saveP[KEYS[k]] = P[KEYS[k]]; P[KEYS[k]] = pose[KEYS[k]]; } }
+      setPose(); scene.updateMatrixWorld(true);
+      var i = 0;
+      Bin.localToWorld(fp[i++].set(0, -2.0, -2.8));
+      fp[i++].copy(headPos); eq.localToWorld(fp[i - 1]);
+      nav.getWorldPosition(fp[i++]);
+      cub.getWorldPosition(fp[i++]);
+      for (var r = 0; r < rays.length; r++) rayG[r].localToWorld(fp[i++].set(0, 0, rays[r].len));
+      toeG[0].localToWorld(fp[i++].set(0, 0, 1.9));
+      toeG[2].localToWorld(fp[i++].set(0, 0, 1.1));
+      fp[i++].copy(bodyPos); eq.localToWorld(fp[i - 1]);
+      fBox.makeEmpty();
+      for (k = 0; k < i; k++) fBox.expandByPoint(fp[k]);
+      fBox.getCenter(out);
+      var rad = 0;
+      for (k = 0; k < i; k++) rad = Math.max(rad, fp[k].distanceTo(out));
+      if (pose) { for (k = 0; k < KEYS.length; k++) P[KEYS[k]] = saveP[KEYS[k]]; setPose(); scene.updateMatrixWorld(true); }
+      return rad + 0.9;
+    }
+
+    /* angle guides */
+    var CAVC = { C: 0xf2b650, A: 0xf0807a, V: 0xa994f5, E: 0x52c9e2 };
+    var CAVH = { C: "#f2b650", A: "#f0807a", V: "#a994f5", E: "#52c9e2" };
+    var vz = new THREE.Vector3(0, 0, 1), vny = new THREE.Vector3(0, -1, 0), vx = new THREE.Vector3(1, 0, 0);
+    var arcDefs = [
+      { k: "E", parent: scene, center: new THREE.Vector3(2.4, 0, 0), R: 3.6, lx: vz, ly: vny },
+      { k: "A", parent: scene, center: new THREE.Vector3(headBase.x, -3.0, headBase.z), R: 6.0, lx: vz, ly: vx },
+      { k: "V", parent: scene, center: new THREE.Vector3(headBase.x, -0.6, -3.7), R: 2.6, lx: vny, ly: vx },
+      { k: "C", parent: Bin, center: new THREE.Vector3(F.position.x + 1.9, F.position.y, F.position.z), R: 2.4,
+        lx: new THREE.Vector3(0, -Math.sin(BASE), Math.cos(BASE)), ly: new THREE.Vector3(0, -Math.cos(BASE), -Math.sin(BASE)) }
+    ];
+    var m4 = new THREE.Matrix4(), lz = new THREE.Vector3(), lyS = new THREE.Vector3();
+    arcDefs.forEach(function (d) {
+      d.mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: CAVC[d.k], transparent: true, opacity: 0.9, depthTest: false }));
+      d.mesh.renderOrder = 5; d.mesh.position.copy(d.center); d.parent.add(d.mesh);
+      d.last = null; d.tagPos = new THREE.Vector3(); d.tmp = new THREE.Vector3();
+    });
+    function updateArcs() {
+      arcDefs.forEach(function (d) {
+        var ang = P[d.k] * D2R, s = ang < 0 ? -1 : 1, a = Math.abs(ang);
+        if (d.last !== ang) {
+          d.last = ang;
+          d.mesh.geometry.dispose();
+          d.mesh.geometry = new THREE.TorusGeometry(d.R, 0.09, 8, Math.max(4, Math.ceil(Math.max(a, 0.002) * 9)), Math.max(a, 0.002));
+          lyS.copy(d.ly).multiplyScalar(s); lz.crossVectors(d.lx, lyS);
+          m4.makeBasis(d.lx, lyS, lz); d.mesh.quaternion.setFromRotationMatrix(m4);
+        }
+        d.mesh.visible = guides && a > 0.005;
+        var h = a / 2;
+        d.tmp.copy(d.lx).multiplyScalar(Math.cos(h)).addScaledVector(d.ly, Math.sin(h) * s).multiplyScalar(d.R).add(d.center);
+        d.tagPos.copy(d.parent.localToWorld(d.tmp));
+        if (d.tag) d.tag.el.textContent = d.k + " " + Math.round(P[d.k]) + "°";
+      });
+    }
+
+    /* tags */
+    var tags = [];
+    function addTag(o) {
+      var el = document.createElement("div");
+      el.className = "tag " + (o.cls || "");
+      el.textContent = o.text || "";
+      if (o.bg) el.style.background = o.bg;
+      wrap.appendChild(el);
+      var t = { el: el, get: o.get, show: o.show, dy: o.dy || "-50%" };
+      tags.push(t);
+      return t;
+    }
+    arcDefs.forEach(function (d) {
+      d.tag = addTag({ cls: "arc", bg: CAVH[d.k], text: d.k, get: function () { return d.tagPos; }, show: function () { return guides && Math.abs(P[d.k]) > 0.5; } });
+    });
+    var wv1 = new THREE.Vector3(), wv2 = new THREE.Vector3(), wv3 = new THREE.Vector3(), wv4 = new THREE.Vector3(), wv5 = new THREE.Vector3(), wv6 = new THREE.Vector3(), wv7 = new THREE.Vector3();
+    function boneTag(text, fn, dy) { addTag({ text: text, get: fn, show: function () { return labelsOn; }, dy: dy || "-135%" }); }
+    boneTag("Talar head", function () { return head.getWorldPosition(wv1); }, "-210%");
+    boneTag("Calcaneus", function () { return calc.getWorldPosition(wv2); }, "160%");
+    boneTag("Navicular", function () { return nav.getWorldPosition(wv3); });
+    boneTag("Cuboid", function () { return cub.getWorldPosition(wv4); }, "160%");
+    boneTag("Cuneiforms", function () { return icun.getWorldPosition(wv5); }, "-240%");
+    boneTag("Metatarsals", function () { return rayG[2].localToWorld(wv6.set(0, 0, 1.4)); });
+    boneTag("Phalanges", function () { return toeG[1].localToWorld(wv7.set(0, 0, 0.7)); });
+    boneTag("Achilles", function () { return achMid; });
+    var oMed = new THREE.Vector3(6.8, -3.0, 0.8), oLat = new THREE.Vector3(-6.8, -3.0, 0.8);
+    addTag({ cls: "axis", text: "MEDIAL", get: function () { return oMed; } });
+    addTag({ cls: "axis", text: "LATERAL", get: function () { return oLat; } });
+    var pv = new THREE.Vector3();
+    function placeTags() {
+      var W = wrap.clientWidth, H = wrap.clientHeight;
+      tags.forEach(function (t) {
+        var vis = t.show ? t.show() : true;
+        if (!vis) { t.el.hidden = true; return; }
+        pv.copy(t.get()).project(camera);
+        if (pv.z > 1 || pv.z < -1) { t.el.hidden = true; return; }
+        t.el.hidden = false;
+        var x = (pv.x * 0.5 + 0.5) * W, y = (-pv.y * 0.5 + 0.5) * H;
+        t.el.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) translate(-50%," + t.dy + ")";
+      });
+    }
+
+    /* pose */
+    var Yv = new THREE.Vector3(0, 1, 0), dirv = new THREE.Vector3(), midv = new THREE.Vector3();
+    function seg(mesh, a, b) {
+      dirv.subVectors(b, a); var L = dirv.length();
+      midv.addVectors(a, b).multiplyScalar(0.5);
+      mesh.position.copy(midv); mesh.scale.set(1, L, 1);
+      mesh.quaternion.setFromUnitVectors(Yv, dirv.normalize());
+    }
+    var pulseT = 0;
+    function setPose() {
+      eq.rotation.x = P.E * D2R;
+      var devA = clamp(P.A / 35, 0, 1.2), devE = clamp(P.E / 40, 0, 1.2);
+      headFor((12 + 16 * devA) * D2R, (12 + 14 * devE) * D2R, headPos);
+      head.position.copy(headPos); seg(neck, bodyPos, headPos);
+      B.position.copy(headPos);
+      B.rotation.set(0, P.A * D2R, P.V * D2R);
+      F.rotation.x = BASE + P.C * D2R;
+      castFoot.visible = flags.cast; castLeg.visible = flags.cast;
+      markHead.visible = flags.pulse === "head"; markRay.visible = flags.pulse === "ray";
+      markHead.position.copy(headPos);
+    }
+
+    /* camera */
+    var camTh = 55 * D2R, camEl = 17 * D2R, tgtTh = camTh, tgtEl = camEl, R = 22;
+    var MAG_MIN = 0.6, MAG_MAX = 4, EL_MIN = -1.25, EL_MAX = 1.5;
+    var mag = 1.25, tgtMag = 1.25;
+    var target = new THREE.Vector3(0.4, -0.7, 2.4), tgtTarget = target.clone();
+    var panRight = new THREE.Vector3(), panUp = new THREE.Vector3();
+    function placeCam() {
+      var ce = Math.cos(camEl), dist = R / mag;
+      camera.position.set(target.x + dist * ce * Math.sin(camTh), target.y + dist * Math.sin(camEl), target.z + dist * ce * Math.cos(camTh));
+      camera.lookAt(target);
+    }
+    function zoomUI() {
+      var s = $("s-zoom"), o = $("o-zoom");
+      if (s) s.value = String(tgtMag);
+      if (o) o.textContent = tgtMag.toFixed(1) + "×";
+    }
+    function setMag(m, snap) {
+      tgtMag = clamp(m, MAG_MIN, MAG_MAX);
+      if (snap) mag = tgtMag;
+      zoomUI(); dirty = true;
+    }
+    function panBy(dx, dy, snap) {
+      follow = false;
+      var h = wrap.clientHeight || 1;
+      var s = 2 * Math.tan(camera.fov * D2R / 2) * (R / mag) / h;
+      panRight.setFromMatrixColumn(camera.matrixWorld, 0);
+      panUp.setFromMatrixColumn(camera.matrixWorld, 1);
+      tgtTarget.addScaledVector(panRight, -dx * s).addScaledVector(panUp, dy * s);
+      tgtTarget.x = clamp(tgtTarget.x, -7, 7);
+      tgtTarget.y = clamp(tgtTarget.y, -5, 11);
+      tgtTarget.z = clamp(tgtTarget.z, -4, 9);
+      if (snap) target.copy(tgtTarget);
+      dirty = true;
+    }
+    api.zoomBy = function (f) { setMag(tgtMag * f); };
+    api.setMag = function (m) { setMag(m); };
+    api.panBy = panBy;
+    api.fit = function (which) {
+      if (which === "foot") {
+        var rad = footSphere(fCenter, T);
+        var half = Math.min(camera.fov * D2R / 2, Math.atan(Math.tan(camera.fov * D2R / 2) * camera.aspect));
+        follow = true; tgtTarget.copy(fCenter);
+        tgtMag = clamp(R * Math.sin(half) / rad, MAG_MIN, MAG_MAX);
+      } else { follow = false; tgtTarget.set(0.4, 1.4, 1.6); tgtMag = 1; }
+      zoomUI(); dirty = true;
+    };
+    api.recenter = function (pose) {
+      if (!follow) return;
+      footSphere(fCenter, pose); tgtTarget.copy(fCenter); dirty = true;
+    };
+    zoomUI();
+    function resize() {
+      var w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      R = 22 * Math.max(1, 1.3 / camera.aspect);
+      camera.updateProjectionMatrix();
+      dirty = true;
+    }
+    api.setView = function (th, el) {
+      var d = ((th - camTh + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+      tgtTh = camTh + d; tgtEl = el; dirty = true;
+    };
+    if (window.ResizeObserver) { new ResizeObserver(resize).observe(wrap); }
+    window.addEventListener("resize", resize);
+    resize();
+
+    /* one pointer rotates (Shift or right button moves), two pointers pinch to zoom and move */
+    var dragging = false, ptrs = {}, nPtr = 0, panMode = false, pinchD = 0, pinchX = 0, pinchY = 0;
+    function twoPts() {
+      var ids = Object.keys(ptrs), a = ptrs[ids[0]], b = ptrs[ids[1]];
+      return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+    canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    canvas.addEventListener("pointerdown", function (e) {
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+      nPtr = Object.keys(ptrs).length;
+      dragging = true; spin = false; syncSpin();
+      panMode = e.button === 2 || e.shiftKey;
+      if (nPtr === 2) { var q = twoPts(); pinchD = q.d; pinchX = q.x; pinchY = q.y; }
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    canvas.addEventListener("pointermove", function (e) {
+      var p = ptrs[e.pointerId];
+      if (!p) return;
+      var dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (nPtr >= 2) {
+        var q = twoPts();
+        if (pinchD > 8 && q.d > 8) setMag(tgtMag * q.d / pinchD, true);
+        var mx = q.x - pinchX, my = q.y - pinchY;
+        if (Math.hypot(mx, my) > 2) { panBy(mx, my, true); pinchX = q.x; pinchY = q.y; }
+        pinchD = q.d;
+      } else if (panMode) {
+        panBy(dx, dy, true);
+      } else {
+        camTh -= dx * 0.008; tgtTh = camTh;
+        camEl = clamp(camEl + dy * 0.006, EL_MIN, EL_MAX); tgtEl = camEl;
+      }
+      dirty = true;
+    });
+    function endDrag(e) {
+      delete ptrs[e.pointerId];
+      nPtr = Object.keys(ptrs).length;
+      dragging = nPtr > 0;
+    }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      setMag(tgtMag * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0018)));
+    }, { passive: false });
+    canvas.addEventListener("keydown", function (e) {
+      var k = e.key, used = true;
+      if (k === "ArrowLeft") { tgtTh += 0.15; spin = false; syncSpin(); }
+      else if (k === "ArrowRight") { tgtTh -= 0.15; spin = false; syncSpin(); }
+      else if (k === "ArrowUp") { if (e.shiftKey) panBy(0, -40, false); else tgtEl = clamp(tgtEl - 0.1, EL_MIN, EL_MAX); }
+      else if (k === "ArrowDown") { if (e.shiftKey) panBy(0, 40, false); else tgtEl = clamp(tgtEl + 0.1, EL_MIN, EL_MAX); }
+      else if (k === "+" || k === "=") { setMag(tgtMag * 1.2); }
+      else if (k === "-" || k === "_") { setMag(tgtMag / 1.2); }
+      else { used = false; }
+      if (used) { e.preventDefault(); dirty = true; }
+    });
+
+    var visible = true;
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (en) { visible = en[0].isIntersecting; if (visible) dirty = true; }).observe(wrap);
+    }
+
+    function frame() {
+      setPose(); placeCam();
+      grid.visible = camEl > -0.12;
+      camera.updateMatrixWorld(true); scene.updateMatrixWorld(true);
+      updateArcs(); updateTendon(); updateArch(); placeTags();
+      renderer.render(scene, camera);
+    }
+    api.fit("foot");
+    var last = 0;
+    function tick(t) {
+      window.requestAnimationFrame(tick);
+      if (!visible) return;
+      var dt = Math.min(0.06, Math.max(0, (t - last) / 1000)); last = t;
+      var k = reduced ? 1 : 1 - Math.exp(-dt * 5.5);
+      var moving = false;
+      KEYS.forEach(function (q) {
+        var d = T[q] - P[q];
+        if (Math.abs(d) > 0.02) { P[q] += d * k; moving = true; }
+        else if (d !== 0) { P[q] = T[q]; moving = true; }
+      });
+      if (spin && !dragging && !reduced) tgtTh += dt * 0.32;
+      var dth = tgtTh - camTh, del = tgtEl - camEl, dmg = tgtMag - mag;
+      var dtg = target.distanceToSquared(tgtTarget);
+      if (Math.abs(dth) > 0.0004 || Math.abs(del) > 0.0004 || Math.abs(dmg) > 0.0004 || dtg > 1e-6) {
+        var kc = reduced ? 1 : 1 - Math.exp(-dt * 9);
+        camTh += dth * kc; camEl += del * kc; mag += dmg * kc; target.lerp(tgtTarget, kc);
+        moving = true;
+      }
+      var pulsing = flags.pulse !== null;
+      if (pulsing) {
+        if (!reduced) {
+          pulseT += dt;
+          var s = 1 + 0.1 * Math.sin(pulseT * 5);
+          markHead.scale.setScalar(1.2 * s); markRay.scale.setScalar(s);
+        } else { markHead.scale.setScalar(1.2); markRay.scale.setScalar(1); }
+      }
+      if (moving) paintReadout();
+      if (moving || dirty || (pulsing && !reduced)) { frame(); dirty = false; }
+    }
+    window.requestAnimationFrame(tick);
+  }
+
+  /* ---------- view and toggle buttons ---------- */
+  var VIEWS = {
+    front: [0, 0.18],
+    medial: [90 * D2R, 0.14],
+    lateral: [-90 * D2R, 0.14],
+    back: [Math.PI, 0.16],
+    top: [Math.PI, 1.38],
+    sole: [0, -1.2]
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function (b) {
+    b.addEventListener("click", function () {
+      var v = VIEWS[b.getAttribute("data-view")];
+      spin = false; syncSpin(); api.setView(v[0], v[1]);
+    });
+  });
+  function syncSpin() { $("b-spin").setAttribute("aria-pressed", spin ? "true" : "false"); }
+  $("b-spin").addEventListener("click", function () { spin = !spin; syncSpin(); dirty = true; });
+  $("b-angles").addEventListener("click", function () {
+    guides = !guides; this.setAttribute("aria-pressed", guides ? "true" : "false"); dirty = true;
+  });
+  $("b-labels").addEventListener("click", function () {
+    labelsOn = !labelsOn; this.setAttribute("aria-pressed", labelsOn ? "true" : "false"); dirty = true;
+  });
+  $("b-labels").setAttribute("aria-pressed", labelsOn ? "true" : "false");
+  $("b-regions").addEventListener("click", function () {
+    regionsOn = !regionsOn; this.setAttribute("aria-pressed", regionsOn ? "true" : "false");
+    $("legend").hidden = !regionsOn && !archOn; api.regions(); dirty = true;
+  });
+  $("b-arch").addEventListener("click", function () {
+    archOn = !archOn; this.setAttribute("aria-pressed", archOn ? "true" : "false");
+    $("legend").hidden = !regionsOn && !archOn; dirty = true;
+  });
+  $("b-fit").addEventListener("click", function () { api.fit("foot"); });
+  $("b-whole").addEventListener("click", function () { api.fit("whole"); });
+  $("b-zin").addEventListener("click", function () { api.zoomBy(1.25); });
+  $("b-zout").addEventListener("click", function () { api.zoomBy(0.8); });
+  $("b-up").addEventListener("click", function () { api.panBy(0, -70, false); });
+  $("b-down").addEventListener("click", function () { api.panBy(0, 70, false); });
+  $("s-zoom").addEventListener("input", function () { api.setMag(+this.value); });
+  syncSpin();
+
+  /* ---------- treat mode ---------- */
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    $("b-play").textContent = "Play";
+  }
+  function renderCard(s) {
+    $("sc-wk").textContent = s.wk;
+    $("sc-title").textContent = s.title;
+    $("sc-do").textContent = s.doIt;
+    $("sc-why").textContent = s.why;
+    $("sc-hook").textContent = s.hook;
+  }
+  function applyStep(i) {
+    stepIdx = clamp(i, 0, STEPS.length - 1);
+    var s = STEPS[stepIdx];
+    flags.cast = s.cast; flags.pulse = s.pulse; flags.cut = s.cut;
+    renderCard(s);
+    Array.prototype.forEach.call($("steps").children, function (c, ci) {
+      c.setAttribute("aria-pressed", ci === stepIdx ? "true" : "false");
+    });
+    var chip = $("steps").children[stepIdx];
+    if (chip && chip.scrollIntoView) {
+      try { $("steps").scrollTo({ left: chip.offsetLeft - 16, behavior: reduced ? "auto" : "smooth" }); } catch (e) {}
+    }
+    setTarget(s.v);
+  }
+  STEPS.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = s.label; b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function () { stopPlay(); applyStep(i); });
+    $("steps").appendChild(b);
+  });
+  $("b-prev").addEventListener("click", function () { stopPlay(); applyStep(stepIdx - 1); });
+  $("b-next").addEventListener("click", function () { stopPlay(); applyStep(stepIdx + 1); });
+  $("b-play").addEventListener("click", function () {
+    if (playTimer) { stopPlay(); return; }
+    if (stepIdx >= STEPS.length - 1) applyStep(0);
+    $("b-play").textContent = "Pause";
+    playTimer = setInterval(function () {
+      if (stepIdx >= STEPS.length - 1) { stopPlay(); return; }
+      applyStep(stepIdx + 1);
+    }, 3600);
+  });
+
+  function setMode(m) {
+    mode = m;
+    $("tab-explore").setAttribute("aria-selected", m === "explore" ? "true" : "false");
+    $("tab-treat").setAttribute("aria-selected", m === "treat" ? "true" : "false");
+    $("panel-explore").hidden = m !== "explore";
+    $("panel-treat").hidden = m !== "treat";
+    if (m === "explore") {
+      stopPlay();
+      flags.cast = false; flags.pulse = null; flags.cut = false;
+      syncSliders(T); dirty = true;
+    } else {
+      applyStep(stepIdx);
+    }
+  }
+  $("tab-explore").addEventListener("click", function () { setMode("explore"); });
+  $("tab-treat").addEventListener("click", function () { setMode("treat"); });
+
+  /* ---------- pirani ---------- */
+  var pv = PIR.map(function () { return 0; });
+  function buildPirani() {
+    var root = $("pirani-list"), lastG = "";
+    PIR.forEach(function (it, i) {
+      if (it.g !== lastG) {
+        var g = document.createElement("p"); g.className = "pgrp"; g.textContent = it.g; root.appendChild(g); lastG = it.g;
+      }
+      var row = document.createElement("div"); row.className = "pi";
+      var n = document.createElement("span"); n.className = "name"; n.textContent = it.n; row.appendChild(n);
+      var seg = document.createElement("div"); seg.className = "seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", it.n);
+      [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (opt) {
+        var b = document.createElement("button"); b.type = "button"; b.textContent = opt[1];
+        b.setAttribute("aria-pressed", opt[0] === 0 ? "true" : "false");
+        b.addEventListener("click", function () {
+          pv[i] = opt[0];
+          Array.prototype.forEach.call(seg.children, function (c) { c.setAttribute("aria-pressed", c === b ? "true" : "false"); });
+          paintPirani();
+        });
+        seg.appendChild(b);
+      });
+      row.appendChild(seg);
+      var h = document.createElement("span"); h.className = "ph"; h.textContent = it.h; row.appendChild(h);
+      root.appendChild(row);
+    });
+  }
+  function paintPirani() {
+    var hf = pv[0] + pv[1] + pv[2], mf = pv[3] + pv[4] + pv[5], tot = hf + mf;
+    $("p-total").textContent = String(tot);
+    $("p-sub").textContent = "of 6 · hindfoot " + hf + " · midfoot " + mf;
+    $("p-meter").style.width = (tot / 6 * 100) + "%";
+  }
+  buildPirani(); paintPirani();
+
+  /* ---------- quiz ---------- */
+  var qRight = 0, qDone = 0;
+  function paintScore() {
+    $("qscore").textContent = qDone === 0 ? "Answered 0 of " + QZ.length : "Score " + qRight + " / " + qDone + " answered, " + QZ.length + " total";
+  }
+  function buildQuiz() {
+    var root = $("quiz"); root.textContent = ""; qRight = 0; qDone = 0;
+    QZ.forEach(function (item, qi) {
+      var box = document.createElement("article"); box.className = "q";
+      var h = document.createElement("p"); h.className = "qtext"; h.textContent = (qi + 1) + ". " + item.q; box.appendChild(h);
+      var tp = document.createElement("p"); tp.className = "tp"; tp.hidden = true; tp.textContent = "Teaching point: " + item.tp; box.appendChild(tp);
+      var btns = [], answered = false;
+      item.o.forEach(function (opt, oi) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "opt";
+        var s = document.createElement("span"); s.textContent = "ABCD".charAt(oi) + ".  " + opt[0]; b.appendChild(s);
+        var w = document.createElement("span"); w.className = "why"; w.hidden = true; w.textContent = opt[1]; b.appendChild(w);
+        b.addEventListener("click", function () {
+          if (answered) return;
+          answered = true; qDone += 1;
+          if (oi === item.a) qRight += 1; else b.classList.add("wrong");
+          btns.forEach(function (x, xi) {
+            x.querySelector(".why").hidden = false;
+            if (xi === item.a) x.classList.add("right");
+            x.disabled = true;
+          });
+          tp.hidden = false;
+          paintScore();
+        });
+        btns.push(b); box.appendChild(b);
+      });
+      root.appendChild(box);
+    });
+    paintScore();
+  }
+  buildQuiz();
+  $("q-reset").addEventListener("click", buildQuiz);
+
+  /* ---------- start ---------- */
+  syncSliders(T); paintReadout();
+  if (window.THREE) {
+    try { renderer = new THREE.WebGLRenderer({ canvas: $("gl"), antialias: true }); hasGL = true; } catch (e) { hasGL = false; }
+  }
+  if (hasGL) {
+    try { init3D(); } catch (err) { hasGL = false; if (window.console) console.error(err); }
+  }
+  if (!hasGL) { $("glfallback").hidden = false; }
+})();
+</script>
+
+</body></html>
